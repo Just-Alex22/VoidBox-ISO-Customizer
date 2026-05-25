@@ -1,0 +1,78 @@
+#include <tunables/global>
+
+profile voidbox /usr/bin/python3* {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  #include <abstractions/nameservice>
+  #include <abstractions/ssl_certs>
+
+  # Allow reading the entire filesystem (needed for chroot operations)
+  / r,
+  /** r,
+
+  # Allow writing to work directories and tmp
+  /tmp/** rwlk,
+  /tmp/voidbox_** rwlk,
+
+  # Allow writing to user home (for project dirs)
+  owner @{HOME}/** rwlk,
+  owner /root/** rwlk,
+
+  # Mount/umount operations
+  capability sys_admin,
+  capability sys_chroot,
+  capability mknod,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability setuid,
+  capability setgid,
+  capability net_admin,
+
+  # Allow executing system tools
+  /usr/bin/unsquashfs Px,
+  /usr/bin/mksquashfs Px,
+  /usr/bin/xorriso    Px,
+  /usr/bin/wget       Px,
+  /usr/bin/xterm      Px,
+  /usr/sbin/chroot    Px,
+  /usr/bin/chroot     Px,
+  /usr/bin/mount      Px,
+  /usr/bin/umount     Px,
+  /usr/bin/rsync      Px,
+  /usr/bin/dd         Px,
+  /usr/bin/mkfs.ext4  Px,
+  /usr/bin/tar        Px,
+  /usr/bin/xhost      Px,
+  /bin/*              Px,
+  /usr/bin/*          Px,
+  /usr/sbin/*         Px,
+  /sbin/*             Px,
+
+  # Network access (for downloading ISOs)
+  network inet stream,
+  network inet6 stream,
+
+  # X11 / Wayland display access
+  /tmp/.X*              rw,
+  /tmp/.voidbox_xauth   rw,
+  /tmp/voidbox-*        rwlk,
+  /run/user/*/wayland-* rw,
+  @{HOME}/.Xauthority   r,
+  /root/.Xauthority     r,
+
+  # Device access for loop mounts
+  /dev/loop*   rw,
+  /dev/loop-control rw,
+
+  # Proc/sys access
+  @{PROC}/**   r,
+  /sys/**      r,
+
+  # Allow all signals
+  signal (send, receive),
+
+  # Allow ptrace for chroot terminal
+  ptrace (read, trace),
+}
