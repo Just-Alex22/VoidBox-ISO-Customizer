@@ -2,7 +2,7 @@
 
 ![Repo](https://img.shields.io/badge/github-repo-green?logo=github)
 ![Licence](https://img.shields.io/badge/Licence:-MIT-green)
-![Version](https://img.shields.io/badge/Latest%20Supported%20Version:-2025__02__02-green)
+![Version](https://img.shields.io/badge/Latest%20Supported%20Void%20Linux%20Version:-2025__02__02-green)
 ![Toolkit](https://img.shields.io/badge/Toolkit:-PySide6-green)
 ![Languagues](https://img.shields.io/badge/Languages:-C,%20Python-green)
 
