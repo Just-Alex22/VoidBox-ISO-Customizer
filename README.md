@@ -1,8 +1,13 @@
-# VoidBox
+# <img src=assets/logo.svg height="35" valign="middle"> VoidBox
 
-<p align="center">
-  <img src="assets/logo.svg" alt="VoidBox Logo" width="150"/>
-</p>
+![Repo](https://img.shields.io/badge/github-repo-green?logo=github)
+![Licence](https://img.shields.io/badge/Licence:-MIT-green)
+![Version](https://img.shields.io/badge/Latest%20Supported%20Version:-2025__02__02-green)
+![Toolkit](https://img.shields.io/badge/Toolkit:-PySide6-green)
+![Languagues](https://img.shields.io/badge/Languages:-C,%20Python-green)
+
+> **Disclaimer!!** Using VoidBox's chroot feature on any Debian-based distribution or any non-Void distro can cause severe conflicts with the AppArmor security module, and the only way to fix it is to force-restart. **Use at your own risk!!**
+
 
 ## What is VoidBox?
 
