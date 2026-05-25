@@ -1,4 +1,4 @@
-# <img src=assets/logo.svg height="30" valign="middle"> VoidBox
+# <img src=assets/logo.svg height="30" valign="middle"> VoidBox ISO Customizer
 
 ![Repo](https://img.shields.io/badge/github-repo-green?logo=github)
 ![Licence](https://img.shields.io/badge/Licence:-MIT-green)
