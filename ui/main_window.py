@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QIcon
 
 from ui.welcome_page      import WelcomePage
+from ui.compression_page  import CompressionPage
 from ui.workdir_page      import WorkdirPage
 from ui.iso_selector_page import IsoSelectorPage
 from ui.download_page     import DownloadPage
@@ -14,14 +15,15 @@ from ui.chroot_page       import ChrootPage
 from ui.finish_page       import FinishPage
 
 # Page indices — change here if order changes, nowhere else
-P_WELCOME  = 0
-P_WORKDIR  = 1
-P_ISO      = 2
-P_DOWNLOAD = 3
-P_CHROOT   = 4
-P_BUILD    = 5
+P_WELCOME     = 0
+P_WORKDIR     = 1
+P_ISO         = 2
+P_DOWNLOAD    = 3
+P_CHROOT      = 4
+P_COMPRESSION = 5
+P_BUILD       = 6
 
-PAGES = ["Welcome", "Work Directory", "Select ISO", "Download", "Customize", "Build"]
+PAGES = ["Welcome", "Work Directory", "Select ISO", "Download", "Customize", "Compression", "Build"]
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
 
 
@@ -56,15 +58,17 @@ class MainWindow(QMainWindow):
         cl.setSpacing(0)
 
         self.stack = QStackedWidget()
-        self.welcome_page  = WelcomePage(self)
-        self.workdir_page  = WorkdirPage(self)
-        self.iso_page      = IsoSelectorPage(self)
-        self.download_page = DownloadPage(self)
-        self.chroot_page   = ChrootPage(self)
-        self.finish_page   = FinishPage(self)
+        self.welcome_page      = WelcomePage(self)
+        self.workdir_page      = WorkdirPage(self)
+        self.iso_page          = IsoSelectorPage(self)
+        self.download_page     = DownloadPage(self)
+        self.chroot_page       = ChrootPage(self)
+        self.compression_page  = CompressionPage(self)
+        self.finish_page       = FinishPage(self)
 
         for page in [self.welcome_page, self.workdir_page, self.iso_page,
-                     self.download_page, self.chroot_page, self.finish_page]:
+                     self.download_page, self.chroot_page, self.compression_page,
+                     self.finish_page]:
             self.stack.addWidget(page)
 
         cl.addWidget(self.stack)
@@ -211,12 +215,15 @@ class MainWindow(QMainWindow):
         has_iso    = bool(self.state.get("iso_path"))
         has_rootfs = bool(self.state.get("squashfs_dir"))
 
+        if current == P_BUILD:
+            return P_COMPRESSION
+
         if current == P_CHROOT:
-            if has_rootfs:
-                return P_WORKDIR
-            if has_iso or self.state.get("arch") == "custom":
-                return P_ISO
-            return P_DOWNLOAD
+            return P_COMPRESSION
+
+        if current == P_COMPRESSION:
+            self.state["compression"] = self.compression_page.get_selection()
+            return P_BUILD
 
         if current == P_DOWNLOAD:
             return P_ISO
@@ -254,6 +261,9 @@ class MainWindow(QMainWindow):
                     self.state["arch"] = "aarch64"
                 else:
                     self.state["arch"] = "x86_64"
+
+        elif current == P_COMPRESSION:
+            self.state["compression"] = self.compression_page.get_selection()
 
         elif current == P_ISO:
             arch = self.iso_page.get_selection()
