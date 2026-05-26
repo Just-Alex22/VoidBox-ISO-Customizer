@@ -6,6 +6,8 @@
 ![Toolkit](https://img.shields.io/badge/Toolkit:-PySide6-green)
 ![Languagues](https://img.shields.io/badge/Languages:-C,%20Python-green)
 
+![Main Window](assets/screenshot.png)
+
 > **Warning:**
 > Running VoidBox's chroot environment on distributions that enforce AppArmor (such as Ubuntu and Debian derivatives) may cause mount namespace conflicts or leave AppArmor-protected processes in an inconsistent state. A system reboot may be required to recover. Use this feature at your own risk.
 
