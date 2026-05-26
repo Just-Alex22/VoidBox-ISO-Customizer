@@ -84,37 +84,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        title_block = QWidget()
-        title_block.setObjectName("sidebarTitle")
-        title_block.setFixedHeight(90)
-        tbl = QVBoxLayout(title_block)
-        tbl.setContentsMargins(16, 12, 16, 12)
-        tbl.setSpacing(4)
 
-        logo_row = QHBoxLayout()
-        logo_row.setSpacing(10)
-        logo_path = os.path.join(ASSETS_DIR, "logo.svg")
-        if os.path.exists(logo_path):
-            logo_label = QLabel()
-            px = QPixmap(logo_path).scaled(28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            logo_label.setPixmap(px)
-            logo_row.addWidget(logo_label)
-
-        app_label = QLabel("VoidBox")
-        app_label.setObjectName("sidebarAppName")
-        logo_row.addWidget(app_label)
-        logo_row.addStretch()
-
-        ver_label = QLabel("v0.1.0")
-        ver_label.setObjectName("sidebarVersion")
-        tbl.addLayout(logo_row)
-        tbl.addWidget(ver_label)
-        layout.addWidget(title_block)
-
-        sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
-        sep.setObjectName("sidebarSep")
-        layout.addWidget(sep)
 
         self.step_widgets = []
         for i, name in enumerate(PAGES):
@@ -123,10 +93,9 @@ class MainWindow(QMainWindow):
             self.step_widgets.append(w)
 
         layout.addStretch()
-        footer = QLabel("Void Linux ISO Builder")
+        footer = QLabel("v1.0-rc")
         footer.setObjectName("sidebarFooter")
         footer.setAlignment(Qt.AlignCenter)
-        footer.setWordWrap(True)
         layout.addWidget(footer)
         return sidebar
 

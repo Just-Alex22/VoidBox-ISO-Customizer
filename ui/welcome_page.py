@@ -1,5 +1,9 @@
+import os
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame, QHBoxLayout
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap, QFont
+
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
 
 
 class WelcomePage(QWidget):
@@ -12,8 +16,28 @@ class WelcomePage(QWidget):
         layout.setContentsMargins(60, 60, 60, 40)
         layout.setSpacing(24)
 
+        # Header row: logo + title aligned
+        header_row = QHBoxLayout()
+        header_row.setSpacing(16)
+        header_row.setAlignment(Qt.AlignVCenter)
+
+        logo_path = os.path.join(ASSETS_DIR, "logo.svg")
+        if os.path.exists(logo_path):
+            logo_label = QLabel()
+            px = QPixmap(logo_path).scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            logo_label.setPixmap(px)
+            logo_label.setFixedSize(40, 40)
+            header_row.addWidget(logo_label)
+
         title = QLabel("Welcome to VoidBox")
         title.setObjectName("pageTitle")
+        f = QFont()
+        f.setPointSize(26)
+        f.setBold(True)
+        title.setFont(f)
+        title.setAlignment(Qt.AlignVCenter)
+        header_row.addWidget(title)
+        header_row.addStretch()
 
         subtitle = QLabel(
             "Create your own custom Void Linux ISO.\n"
@@ -22,7 +46,7 @@ class WelcomePage(QWidget):
         subtitle.setObjectName("pageSubtitle")
         subtitle.setWordWrap(True)
 
-        layout.addWidget(title)
+        layout.addLayout(header_row)
         layout.addWidget(subtitle)
 
         card = QFrame()
