@@ -45,10 +45,10 @@ Clone the repository and install dependencies:
 
 ```bash
 # Void Linux
-sudo xbps-install python3 python3-pip squashfs-tools xorriso wget xterm python3-devel openssl-devel python3-pyside6 python3-setuptools gcc
+sudo xbps-install python3 python3-pip squashfs-tools xorriso wget xterm python3-devel openssl-devel python3-pyside6 python3-setuptools gcc xorg-xhost
 
 # Debian / Ubuntu
-sudo apt install python3 python3-pip squashfs-tools xorriso wget xterm python3-dev libssl-dev python3-pyside6 python3-setuptools
+sudo apt install python3 python3-pip squashfs-tools xorriso wget xterm python3-dev libssl-dev python3-pyside6 python3-setuptools x11-xserver-utils
 
 ```
 
