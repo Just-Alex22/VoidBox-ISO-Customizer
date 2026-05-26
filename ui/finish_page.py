@@ -16,12 +16,13 @@ class BuildWorker(QObject):
     finished = Signal(str)
     error    = Signal(str)
 
-    def __init__(self, rootfs_dir, iso_path, work_dir, os_name):
+    def __init__(self, rootfs_dir, iso_path, work_dir, os_name, compression="xz"):
         super().__init__()
-        self.rootfs_dir = rootfs_dir
-        self.iso_path   = iso_path
-        self.work_dir   = work_dir
-        self.os_name    = os_name.replace(" ", "_") or "void-custom"
+        self.rootfs_dir  = rootfs_dir
+        self.iso_path    = iso_path
+        self.work_dir    = work_dir
+        self.os_name     = os_name.replace(" ", "_") or "void-custom"
+        self.compression = compression
 
     def _find_file(self, base_dir, filenames):
         for root, dirs, files in os.walk(base_dir):
@@ -30,13 +31,32 @@ class BuildWorker(QObject):
                     return os.path.join(root, f)
         return None
 
+    # FIX: Added a helper function to cleanly patch the grub.cfg files
+    def _patch_cfg_file(self, cfg_path, volid, base_dir):
+        try:
+            with open(cfg_path, 'r', errors='ignore') as file:
+                content = file.read()
+            
+            # Robust regex: matches any character up to a whitespace or quote
+            new_content = re.sub(
+                r'(CDLABEL|LABEL)=[^\s"]+',
+                f'CDLABEL={volid}',
+                content
+            )
+            
+            if new_content != content:
+                with open(cfg_path, 'w') as file:
+                    file.write(new_content)
+                self.log.emit(f"Updated label in {os.path.relpath(cfg_path, base_dir)}")
+        except Exception:
+            pass
+
     def run(self):
         try:
             if hasattr(os, 'geteuid') and os.geteuid() != 0:
                 self.error.emit("This operation requires root privileges (mount -o loop).")
                 return
 
-            # FIX: Prevent trying to mount the output ISO as the source ISO
             if self.iso_path.endswith("-custom.iso"):
                 self.error.emit(
                     f"Source ISO ({self.iso_path}) looks like a custom build. "
@@ -55,7 +75,6 @@ class BuildWorker(QObject):
             if os.path.exists(iso_out):
                 os.remove(iso_out)
 
-            # FIX: Clean up package caches and logs to prevent GBs of bloat
             self.log.emit("Cleaning package caches and logs from rootfs...")
             shutil.rmtree(os.path.join(self.rootfs_dir, "var/cache/xbps"), ignore_errors=True)
             shutil.rmtree(os.path.join(self.rootfs_dir, "var/log"), ignore_errors=True)
@@ -69,11 +88,18 @@ class BuildWorker(QObject):
             if os.path.exists(new_squashfs):
                 os.remove(new_squashfs)
 
-            # FIX: Added "-Xbcj", "x86" to match Void's official compression
+            mksquashfs_cmd = [
+                "mksquashfs", self.rootfs_dir, new_squashfs,
+                "-comp", self.compression, "-b", "1M", "-noappend",
+            ]
+            if self.compression == "xz":
+                mksquashfs_cmd += ["-Xbcj", "x86"]
+            elif self.compression == "zstd":
+                mksquashfs_cmd += ["-Xcompression-level", "19"]
+
+            self.log.emit(f"Compression: {self.compression}")
             proc = subprocess.Popen(
-                ["mksquashfs", self.rootfs_dir, new_squashfs,
-                 "-comp", "xz", "-b", "1M", "-noappend",
-                 "-Xbcj", "x86"],
+                mksquashfs_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -127,12 +153,10 @@ class BuildWorker(QObject):
                     self.error.emit(f"rsync failed: {r.stderr}")
                     return
             finally:
-                # FIX: Changed from "umount -l" to "umount -d" to free the loop device
                 subprocess.run(["umount", "-d", mount_dir], capture_output=True)
 
             self.progress.emit(65)
 
-            # Remove old ext3fs/rootfs images that confuse Dracut on boot
             self.log.emit("Checking for legacy ext images...")
             for root, dirs, files in os.walk(iso_rw):
                 for f in files:
@@ -141,7 +165,6 @@ class BuildWorker(QObject):
                         os.remove(target)
                         self.log.emit(f"Removed old ext image to prevent Dracut errors: {os.path.relpath(target, iso_rw)}")
 
-            # Replace squashfs
             replaced = False
             for root, dirs, files in os.walk(iso_rw):
                 for f in files:
@@ -165,51 +188,56 @@ class BuildWorker(QObject):
 
             # -----------------------------------------------------------------
             # FIX: SYNCHRONIZE VOLUME ID AND BOOT CONFIGURATIONS
-            # Dracut fails if the GRUB config asks for CDLABEL=VOID_LIVE but the
-            # ISO volume is named something else (e.g., FIGAROS). We must update them together.
             # -----------------------------------------------------------------
             custom_volid = re.sub(r'[^A-Z0-9_]', '_', self.os_name.upper())[:32]
             if not custom_volid:
                 custom_volid = "VOID_LIVE"
-
+            
             volid = custom_volid
             self.log.emit(f"Target ISO Volume ID: {volid}")
 
+            # 1. Patch standard GRUB configs on the ISO filesystem
             self.log.emit("Updating boot configurations to match new Volume ID...")
             for root, dirs, files in os.walk(iso_rw):
                 for f in files:
-                    if f.endswith(".cfg"):  # grub.cfg, loopback.cfg, isolinux.cfg
+                    if f.endswith(".cfg"):
                         cfg_path = os.path.join(root, f)
-                        try:
-                            with open(cfg_path, 'r', errors='ignore') as file:
-                                content = file.read()
+                        self._patch_cfg_file(cfg_path, volid, iso_rw)
 
-                            # Replace CDLABEL=XXX or LABEL=XXX with CDLABEL=<volid>
-                            new_content = re.sub(
-                                r'(CDLABEL|LABEL)=[A-Z0-9_]+',
-                                f'CDLABEL={volid}',
-                                content
-                            )
-
-                            if new_content != content:
-                                with open(cfg_path, 'w') as file:
-                                    file.write(new_content)
-                                self.log.emit(f"Updated label in {os.path.relpath(cfg_path, iso_rw)}")
-                        except Exception:
-                            pass
+            # 2. Patch the EFI boot image (CRITICAL for fixing UEFI Dracut errors)
+            efi_img = self._find_file(iso_rw, ["efiboot.img", "efi.img", "EFI.img"])
+            if efi_img and os.path.exists(efi_img):
+                self.log.emit("Patching EFI boot image...")
+                efi_mount = os.path.join(self.work_dir, "efi_mount")
+                os.makedirs(efi_mount, exist_ok=True)
+                
+                r = subprocess.run(
+                    ["mount", "-o", "loop", efi_img, efi_mount],
+                    capture_output=True, text=True
+                )
+                if r.returncode == 0:
+                    try:
+                        for root, dirs, files in os.walk(efi_mount):
+                            for f in files:
+                                if f.endswith(".cfg"):
+                                    cfg_path = os.path.join(root, f)
+                                    self._patch_cfg_file(cfg_path, volid, efi_mount)
+                    finally:
+                        subprocess.run(["umount", "-d", efi_mount], capture_output=True)
+                else:
+                    self.log.emit("Warning: Could not mount EFI image to patch it.")
             # -----------------------------------------------------------------
 
             self.log.emit("Building ISO with xorriso...")
 
             eltorito = self._find_file(iso_rw, ["eltorito.img", "boot.img"])
-            efi_img  = self._find_file(iso_rw, ["efiboot.img", "efi.img", "EFI.img"])
 
             cmd = [
                 "xorriso", "-as", "mkisofs",
                 "-iso-level", "3",
                 "-r",
                 "-J",
-                "-volid", volid,  # This now perfectly matches the grub.cfg update above
+                "-volid", volid,
                 "-output", iso_out,
                 "-partition_offset", "16",
             ]
@@ -356,7 +384,8 @@ class FinishPage(QWidget):
             return
 
         self._thread = QThread()
-        self._worker = BuildWorker(rootfs, iso, work, name)
+        compression = mw.state.get("compression", "xz")
+        self._worker = BuildWorker(rootfs, iso, work, name, compression)
         self._worker.moveToThread(self._thread)
 
         self._thread.started.connect(self._worker.run)
