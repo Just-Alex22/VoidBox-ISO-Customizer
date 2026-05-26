@@ -16,12 +16,13 @@ class BuildWorker(QObject):
     finished = Signal(str)
     error    = Signal(str)
 
-    def __init__(self, rootfs_dir, iso_path, work_dir, os_name):
+    def __init__(self, rootfs_dir, iso_path, work_dir, os_name, compression="xz"):
         super().__init__()
-        self.rootfs_dir = rootfs_dir
-        self.iso_path   = iso_path
-        self.work_dir   = work_dir
-        self.os_name    = os_name.replace(" ", "_") or "void-custom"
+        self.rootfs_dir  = rootfs_dir
+        self.iso_path    = iso_path
+        self.work_dir    = work_dir
+        self.os_name     = os_name.replace(" ", "_") or "void-custom"
+        self.compression = compression
 
     def _find_file(self, base_dir, filenames):
         for root, dirs, files in os.walk(base_dir):
@@ -69,11 +70,21 @@ class BuildWorker(QObject):
             if os.path.exists(new_squashfs):
                 os.remove(new_squashfs)
 
-            # FIX: Added "-Xbcj", "x86" to match Void's official compression
+            # Build mksquashfs command with selected compression
+            mksquashfs_cmd = [
+                "mksquashfs", self.rootfs_dir, new_squashfs,
+                "-comp", self.compression, "-b", "1M", "-noappend",
+            ]
+            # xz bcj filter improves compression on x86 binaries (Void default)
+            if self.compression == "xz":
+                mksquashfs_cmd += ["-Xbcj", "x86"]
+            # zstd: use high compression level
+            elif self.compression == "zstd":
+                mksquashfs_cmd += ["-Xcompression-level", "19"]
+
+            self.log.emit(f"Compression: {self.compression}")
             proc = subprocess.Popen(
-                ["mksquashfs", self.rootfs_dir, new_squashfs,
-                 "-comp", "xz", "-b", "1M", "-noappend",
-                 "-Xbcj", "x86"],
+                mksquashfs_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -356,7 +367,8 @@ class FinishPage(QWidget):
             return
 
         self._thread = QThread()
-        self._worker = BuildWorker(rootfs, iso, work, name)
+        compression = mw.state.get("compression", "xz")
+        self._worker = BuildWorker(rootfs, iso, work, name, compression)
         self._worker.moveToThread(self._thread)
 
         self._thread.started.connect(self._worker.run)
