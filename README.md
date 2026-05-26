@@ -6,7 +6,8 @@
 ![Toolkit](https://img.shields.io/badge/Toolkit:-PySide6-green)
 ![Languagues](https://img.shields.io/badge/Languages:-C,%20Python-green)
 
-> **Disclaimer!!** Using VoidBox's chroot feature on any Debian-based distribution or any distro with AppArmor by default can cause severe conflicts with the AppArmor security module. The only way to fix it is to do a force-restart. **Use at your own risk!!**
+> **Warning**
+> Running VoidBox's chroot environment on distributions that enforce AppArmor (such as Ubuntu and Debian derivatives) may cause mount namespace conflicts or leave AppArmor-protected processes in an inconsistent state. A system reboot may be required to recover. Use this feature at your own risk.
 
 
 ## What is VoidBox?
